@@ -1,0 +1,59 @@
+#!/bin/bash
+
+
+
+declare -A  DebCodename=(
+    [whezzy]="3.10.25-whezzy"
+    [jessie]="4.4.34-jessie"
+    [stretch]="4.14.79-stretch"
+    [buster]="4.19.50-buster"
+)
+
+declare -r lookup_folder=raspbian  # type folder 
+
+kernel_qemu=kernel-qemu- 
+
+stdout_argv()  {
+    if [[ -n $1 ]]  ; then
+        # the first argument should be the code name 
+        for codename in  ${DebCodename[@]} ; do 
+           if  [[ ${1} == ${codename##*-} ]] ; then 
+               kernel_qemu+=${codename} 
+           else   
+            echo -e "codename available ${codename##*-}"  
+           fi 
+        done 
+        if [[ -n $2 ]] ; then 
+            kernel_qemu=kernel-qemu-$2-${1}
+        fi 
+    fi
+}
+
+declare img_loader  
+[ ARGS_PARSER ] 
+{  
+  if [[ -n $1 ]] ;then 
+    img_loader=(raspbian/${1}Img/*.img) 
+    stdout_argv  $1
+    [[ -n $2 ]] && {
+      stdout_argv  $1 $2 
+    }  
+ else 
+     echo -e "${0##*./} codename [version]" 
+     echo -e "using default  Codename :: Stretch"
+     stdout_argv  ${DebCodename[stretch]##*-}  
+ fi 
+}
+
+qemu-system-arm -M versatilepb \
+                -cpu arm1176 \
+                -kernel qemu-rpi-kernel/${kernel_qemu} \
+                -append "root=/dev/sda2 panic=1 rootfstype=ext4 rw" \
+                -hda ${img_loader} \
+                -m 256 \
+                -dtb qemu-rpi-kernel/versatile-pb.dtb \
+                -no-reboot \
+                -net nic -net user,hostfwd=tcp::5022-:22 
+
+
+

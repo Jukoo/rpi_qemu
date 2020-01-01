@@ -1,0 +1,103 @@
+#!/usr/bin/python3 
+
+
+# kndtb_ext=>  kernel image and device tree  blob extraction  
+# MAINTAINER: jukoo  <funscript@outlook.fr> 
+# Temporary mount   img file and extract   kernel img and Device Tree Blob
+# and file descriptor img  dtb  [Divice Tree Blob] 
+# quick python script to extract  data from  img file
+
+
+import os 
+import sys 
+import subprocess 
+import time
+import logging as lg 
+
+BOOTSECTOR        = 0X00001    # ->  here is the kernel  img and the divice Tree blob  
+TARGET_DEVICE     ="/dev/"
+MOUNT_TARGET      ="/mnt/"
+
+DEFAULT_TMP_DIR   ="rpi"       #  by default  rpi is used  as default  folder  
+
+#ERROR  
+NO_F_IMG=0x0000f3 # 234 protocol  
+
+ROOT_UID=0x000000  
+
+# argument token iso file  image  linux  
+
+if len(sys.argv)  == 0x000001  : 
+   print("require file image  to continue process ...")
+   print("usage {}  <linux file image>".format(sys.argv[0][2:]))
+   sys.exit(3)
+
+
+def check_path_location( path_dir) : 
+    if os.path.exists(path_dir)  :
+        lg.warning("folder {} already set".path_dir) 
+        sys.exit(24) 
+    
+
+relative_path = "{}{}".format(MOUNT_TARGET ,DEFAULT_TMP_DIR) 
+if len(sys.argv) is 0x000003 : 
+    DEFAULT_TMP_DIR = sys.argv[0x000002]
+    relative_path = "{}{}".format(MOUNT_TARGET ,DEFAULT_TMP_DIR)  
+    check_path_location(relative_path)
+else  : 
+    check_path_location(relative_path)
+
+
+# only root has  access to run it 
+if os.geteuid() is not   ROOT_UID : 
+    lg.warning("require root super user !")
+    sys.exit(23) 
+
+
+def exec_ops (cmd) : 
+    shell_process = subprocess.Popen(cmd  , stdout=subprocess.PIPE  , shell=True)
+    shell_pStat   = shell_process.wait() 
+    return shell_pStat
+
+# commande collection 
+cmd_stack_exec =  [
+        "mkdir {}{}".format(MOUNT_TARGET,DEFAULT_TMP_DIR),  
+        "losetup -f --show -P {}".format(sys.argv[0x001]) ,  
+        "mount {dev}loop0p1 {mnt}{rpi_dir}".format(dev= TARGET_DEVICE ,mnt =MOUNT_TARGET , rpi_dir=DEFAULT_TMP_DIR ), 
+        #  delete section 
+        # "umount {}{}".format(MOUNT_TARGET, DEFAULT_TMP_DIR) , 
+        # "losetup -d  {}{}".format(TARGET_DEVICE,"loop0")
+        ]
+
+# check file image  containt  bootsector  
+def  linux_Zimage_partition (): 
+    if os.path.exists(sys.argv[0x001]) :
+        zImg_partition  = os.popen("file {}".format(sys.argv[1])).read() 
+        term="partition {}".format(BOOTSECTOR)  
+        if term in zImg_partition :
+            print ("GNU/Linux image found !")  
+    else :
+        lg.warning("no boot sector found")
+        sys.exit(NO_F_IMG) 
+
+def chaining_cmd_stack_exec ():
+    print("stack running...") 
+    for  ux_cmd_val  in  cmd_stack_exec :
+        #read_stdout =os.popen(ux_cmd_val).read() 
+        #print(read_stdout)
+        cmd = "sudo {}".format(ux_cmd_val)
+        time.sleep(0.5)
+        assert(exec_ops(cmd)) ==  0x00  
+
+
+Order_Stack_Call = [
+        linux_Zimage_partition(),  
+        chaining_cmd_stack_exec()
+        ]
+
+
+def main () :
+    for stack_exec in Order_Stack_Call : 
+        stack_exec 
+
+if  __name__=="__main__"  : main() 

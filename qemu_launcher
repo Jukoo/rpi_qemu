@@ -1,0 +1,81 @@
+#!/usr/bin/python3
+
+
+import subprocess 
+import os 
+import sys 
+
+
+# THIS SCRIPT IS BUILD FOR raspi2 system 
+
+TARGET_HOST_SYSTEM  = "raspi2" 
+
+raspbians_essential = {
+            "workdir" : os.getcwd() , 
+            "dtb" : "bcm2709-rpi-2-b.dtb", 
+            "driver_file_image" : "2018-04-18-raspbian-stretch-lite.img",  
+            "kernel_img" : "kernel7.img"
+        }
+
+qemu_arm_machine = {  
+            "machine" :"raspi2" , 
+            "cpu"     : "cortex-a7" , 
+            "used_mem": "1G", 
+            "smp"     : 4 
+         }
+
+
+def process_exec (cmd:str) -> int :  # assertion 0 
+    cli_process = subprocess.Popen(cmd , stdout=subprocess.PIPE , shell=True)  
+    cli_process_status = cli_process.wait()
+    return cli_process_status 
+
+
+
+qemu_cli= """ 
+qemu-system-arm -M {} \
+                -cpu {} \
+                -append "rw earlyprintk loglevel=8 dwc_otg.lpm_enable=0 root=/dev/mmcblk0p2" \
+                -dtb {path}/{f_dtb} \
+                -drive file={path}/{f_img},if=sd,format=raw \
+                -kernel {path}/{k_img} \
+                -m 1G \
+                -smp 4
+
+""".format(TARGET_HOST_SYSTEM,
+            qemu_arm_machine["cpu"]  , 
+           path=raspbians_essential["workdir"] ,
+           f_dtb=raspbians_essential["dtb"],
+           f_img=raspbians_essential["driver_file_image"]  , 
+           k_img=raspbians_essential["kernel_img"]) 
+
+
+
+
+def main () -> None : 
+      ext_files = ["dtb,img"]  
+      file_list = list() 
+      for ras_val in  raspbians_essential.values():
+          try :
+            get_ext =  ras_val.split(".")[1] 
+          except : 
+              continue 
+
+          for ext in ext_files : 
+              if get_ext == ext : 
+                  file_list.append(ras_val)
+
+      for each_file in file_list : 
+          abs_path =  "{}/{}".format(raspbians_essential["workdir"] , each_file)
+          if os.path.exists(abs_path) :  
+              print("done!")
+          else : sys.exit(1)
+
+      
+      if len(sys.argv) >= 2  and sys.argv[1]  == "--start": 
+          process_exec(qemu_cli)
+      else : 
+          print("use --start to start QEMU")
+
+if __name__=="__main__" : 
+    main() 

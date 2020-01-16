@@ -35,11 +35,12 @@ if len(sys.argv)  == 0x000001  :
 
 def check_path_location( path_dir) : 
     if os.path.exists(path_dir)  :
-        lg.warning("folder {} already set".path_dir) 
+        lg.warning("folder {} already set".format(path_dir)) 
         sys.exit(24) 
     
 
 relative_path = "{}{}".format(MOUNT_TARGET ,DEFAULT_TMP_DIR) 
+
 if len(sys.argv) is 0x000003 : 
     DEFAULT_TMP_DIR = sys.argv[0x000002]
     relative_path = "{}{}".format(MOUNT_TARGET ,DEFAULT_TMP_DIR)  
@@ -50,7 +51,7 @@ else  :
 
 # only root has  access to run it 
 if os.geteuid() is not   ROOT_UID : 
-    lg.warning("require root super user !")
+    lg.critical("require root super user !")
     sys.exit(23) 
 
 

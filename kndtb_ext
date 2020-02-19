@@ -7,11 +7,11 @@
 # and file descriptor img  dtb  [Divice Tree Blob] 
 # quick python script to extract  data from  img file
 
-
 import os 
 import sys 
 import subprocess 
 import time
+import shutil 
 import logging as lg 
 
 BOOTSECTOR        = 0X00001    # ->  here is the kernel  img and the divice Tree blob  
@@ -22,7 +22,6 @@ DEFAULT_TMP_DIR   ="rpi"       #  by default  rpi is used  as default  folder
 
 #ERROR  
 NO_F_IMG=0x0000f3 # 234 protocol  
-
 ROOT_UID=0x000000  
 
 # argument token iso file  image  linux  
@@ -33,7 +32,7 @@ if len(sys.argv)  == 0x000001  :
    sys.exit(3)
 
 
-def check_path_location( path_dir) : 
+def check_path_location(path_dir) : 
     if os.path.exists(path_dir)  :
         lg.warning("folder {} already set".format(path_dir)) 
         sys.exit(24) 
@@ -49,10 +48,10 @@ else  :
     check_path_location(relative_path)
 
 
-# only root has  access to run it 
+#REQUIRE  UID 0X00 FOR EXECUTE  
 if os.geteuid() is not   ROOT_UID : 
     lg.critical("require root super user !")
-    sys.exit(23) 
+    sys.exit(os.geteuid()) 
 
 
 def exec_ops (cmd) : 
@@ -60,16 +59,29 @@ def exec_ops (cmd) :
     shell_pStat   = shell_process.wait() 
     return shell_pStat
 
-# commande collection 
-cmd_stack_exec =  [
+def  extract_iso_metdata ():
+    root_temp  ="{}{}/".format(MOUNT_TARGET ,DEFAULT_TMP_DIR) 
+    files  = [ _f  for _f in os.listdir(root_temp) ]
+    if len(files)  is 0x00 : 
+        lg.warning("no file  found on {}".format(root_temp))
+        sys.exit(9) 
+
+    destination  = "{}/{}".format(os.getcwd() , DEFAULT_TMP_DIR)
+    shutil.copytree(root_temp , destination)
+
+# mount the MOUNT_TARGET  
+mount_stack =  [
         "mkdir {}{}".format(MOUNT_TARGET,DEFAULT_TMP_DIR),  
         "losetup -f --show -P {}".format(sys.argv[0x001]) ,  
-        "mount {dev}loop0p1 {mnt}{rpi_dir}".format(dev= TARGET_DEVICE ,mnt =MOUNT_TARGET , rpi_dir=DEFAULT_TMP_DIR ), 
-        #  delete section 
-        # "umount {}{}".format(MOUNT_TARGET, DEFAULT_TMP_DIR) , 
-        # "losetup -d  {}{}".format(TARGET_DEVICE,"loop0")
-        ]
+        "mount {dev}loop0p1 {mnt}{rpi_dir}".format(dev= TARGET_DEVICE ,mnt =MOUNT_TARGET , rpi_dir=DEFAULT_TMP_DIR )
+        ] 
 
+# unmount  MOUNT_TARGET    
+unmount_stack = [ 
+        "umount {}{}".format(MOUNT_TARGET, DEFAULT_TMP_DIR) , 
+        "losetup -d  {}{}".format(TARGET_DEVICE,"loop0")
+        ]
+ 
 # check file image  containt  bootsector  
 def  linux_Zimage_partition (): 
     if os.path.exists(sys.argv[0x001]) :
@@ -82,13 +94,22 @@ def  linux_Zimage_partition ():
         sys.exit(NO_F_IMG) 
 
 def chaining_cmd_stack_exec ():
-    print("stack running...") 
-    for  ux_cmd_val  in  cmd_stack_exec :
+    print("mounting  temporary  dir ")  
+    for  ux_cmd_val  in mount_stack :
         #read_stdout =os.popen(ux_cmd_val).read() 
         #print(read_stdout)
         cmd = "sudo {}".format(ux_cmd_val)
         time.sleep(0.5)
-        assert(exec_ops(cmd)) ==  0x00  
+        assert(exec_ops(cmd)) ==  0x00
+
+    print("extracting  metadata ...")
+    extract_iso_metdata() 
+    
+    print("closing temporary mounted dir")
+    for ux_cmd_val  in unmount_stack :
+        cmd = "sudo {}".format(ux_cmd_val)
+        time.sleep(0.5)
+        assert(exec_ops(cmd)) ==  0x00
 
 
 Order_Stack_Call = [

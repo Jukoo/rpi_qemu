@@ -11,11 +11,11 @@ system_architecture =None
 q_cli="qemu-system-arm " 
 
 # laod  personal configuration  based on rpiconf.json 
-
 if  not os.path.exists(CONF_REF)  or os.path.getsize(CONF_REF)  < 0x0000:
     raise OSError("file  {}  not  or Empty".format(CONF_REF))
 
-with open ( CONF_REF , "r" ) as rpi_conf:system_architecture= json.load(rpi_conf) 
+with open ( CONF_REF , "r" ) as rpi_conf:system_architecture= json.load(rpi_conf)
+
 q_sys = system_architecture["Qemu_Sys_x"] 
 
 def  qemu_build() -> str  : 

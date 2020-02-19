@@ -1,5 +1,5 @@
 {
-    "_comment" : "", 
+    "_comment" : "you can modify this  config", 
     "Qemu_Sys_x" : {
         "M"        : "raspi2",
         "dtb"      : "../bcm2709-rpi-2-b.dtb",

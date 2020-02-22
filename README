@@ -1,0 +1,8 @@
+Life : Linux  Iso  File Extraction 
+----
+Simple  script  to deal  with   iso  file   
+and extract the metadata
+useful if you use qemu to put 
+instructions like  devices tree blob (.dtb)
+the type of Soc (System on chip) to support and kernel instructions and also to have the kernel at your disposal
+

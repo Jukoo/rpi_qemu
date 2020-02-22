@@ -31,21 +31,11 @@ if len(sys.argv)  == 0x000001  :
    print("usage {}  <linux file image>".format(sys.argv[0][2:]))
    sys.exit(3)
 
-
-def check_path_location(path_dir) : 
-    if os.path.exists(path_dir)  :
-        lg.warning("folder {} already set".format(path_dir)) 
-        sys.exit(24) 
-    
-
 relative_path = "{}{}".format(MOUNT_TARGET ,DEFAULT_TMP_DIR) 
 
 if len(sys.argv) is 0x000003 : 
     DEFAULT_TMP_DIR = sys.argv[0x000002]
     relative_path = "{}{}".format(MOUNT_TARGET ,DEFAULT_TMP_DIR)  
-    check_path_location(relative_path)
-else  : 
-    check_path_location(relative_path)
 
 
 #REQUIRE  UID 0X00 FOR EXECUTE  
@@ -59,15 +49,6 @@ def exec_ops (cmd) :
     shell_pStat   = shell_process.wait() 
     return shell_pStat
 
-def  extract_iso_metdata ():
-    root_temp  ="{}{}/".format(MOUNT_TARGET ,DEFAULT_TMP_DIR) 
-    files  = [ _f  for _f in os.listdir(root_temp) ]
-    if len(files)  is 0x00 : 
-        lg.warning("no file  found on {}".format(root_temp))
-        sys.exit(9) 
-
-    destination  = "{}/{}".format(os.getcwd() , DEFAULT_TMP_DIR)
-    shutil.copytree(root_temp , destination)
 
 # mount the MOUNT_TARGET  
 mount_stack =  [
@@ -83,7 +64,7 @@ unmount_stack = [
         ]
  
 # check file image  containt  bootsector  
-def  linux_Zimage_partition (): 
+def  linux_Zimage_partition () : 
     if os.path.exists(sys.argv[0x001]) :
         zImg_partition  = os.popen("file {}".format(sys.argv[1])).read() 
         term="partition {}".format(BOOTSECTOR)  
@@ -93,33 +74,51 @@ def  linux_Zimage_partition ():
         lg.warning("no boot sector found")
         sys.exit(NO_F_IMG) 
 
-def chaining_cmd_stack_exec ():
-    print("mounting  temporary  dir ")  
-    for  ux_cmd_val  in mount_stack :
-        #read_stdout =os.popen(ux_cmd_val).read() 
-        #print(read_stdout)
-        cmd = "sudo {}".format(ux_cmd_val)
+def  chaining_cmd_stack_exec(relate_cmd_stack): 
+    for layer in  relate_cmd_stack  :
+        layer_chaine  = "sudo {}".format(layer) 
         time.sleep(0.5)
-        assert(exec_ops(cmd)) ==  0x00
+        assert (exec_ops(layer_chaine)) == 0x00 
 
-    print("extracting  metadata ...")
-    extract_iso_metdata() 
-    
+def mount  (cmd_stacks) : 
+    print("mounting  temporary  dir ")
+    chaining_cmd_stack_exec(cmd_stacks)  
+     
+def unmount (cmd_stacks):
     print("closing temporary mounted dir")
-    for ux_cmd_val  in unmount_stack :
-        cmd = "sudo {}".format(ux_cmd_val)
-        time.sleep(0.5)
-        assert(exec_ops(cmd)) ==  0x00
+    chaining_cmd_stack_exec(cmd_stacks)  
 
+def  extract_iso_metdata ():
+    print("extracting  metadata ...")
+    root_temp  ="{}{}/".format(MOUNT_TARGET ,DEFAULT_TMP_DIR) 
+    files  = [ _f  for _f in os.listdir(root_temp) ]        
+    destination  = "{}/{}".format(os.getcwd() , DEFAULT_TMP_DIR)
+    shutil.copytree(root_temp , destination)
+"""
+    if len(files)  is 0x00 : 
+        lg.warning("no file  found on {}".format(root_temp))
+        sys.exit(9)
+"""
+
+
+def remove():
+    if os.path.exists(relative_path) : 
+        cmd = "rm -r {}".format(relative_path)
+        assert exec_ops(cmd) == 0x00
+
+   
 
 Order_Stack_Call = [
         linux_Zimage_partition(),  
-        chaining_cmd_stack_exec()
+        mount(mount_stack)     ,
+        extract_iso_metdata()   ,
+        unmount(unmount_stack)  ,
+        remove()
         ]
-
+    
 
 def main () :
     for stack_exec in Order_Stack_Call : 
         stack_exec 
-
+    
 if  __name__=="__main__"  : main() 
